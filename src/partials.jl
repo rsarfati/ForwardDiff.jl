@@ -61,7 +61,11 @@ Base.hash(partials::Partials, hsh::UInt64) = hash(hash(partials), hsh)
 
 @inline Base.copy(partials::Partials) = partials
 
-Base.read(io::IO, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(ntuple(i->read(io, V), N))
+#Base.read(io::IO, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(ntuple(i->read(io, V), N))
+Base.read(io::IO, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(
+                                              SparseVector([i->read(io, V), collect(1:N)]))
+Base.read(io::IO, ::Type{Partials{0,V}}) where {V} = Partials{0,V}(SparseVector{V,Int}(0,[1],[zero(V)]))
+
 
 function Base.write(io::IO, partials::Partials)
     for p in partials
@@ -166,11 +170,19 @@ function tupexpr(f, N)
     end
 end
 
+#=
 @inline iszero_tuple(::Tuple{}) = true
 @inline zero_tuple(::Type{Tuple{}}) = tuple()
 @inline one_tuple(::Type{Tuple{}}) = tuple()
 @inline rand_tuple(::AbstractRNG, ::Type{Tuple{}}) = tuple()
 @inline rand_tuple(::Type{Tuple{}}) = tuple()
+=#
+@inline iszero_tuple(::SparseVector{}) = true
+@inline zero_tuple(::Type{SparseVector{}}) where V = SparseVector{V,Int}(0,[1],[zero(V)])
+@inline one_tuple(::Type{SparseVector{}}) where V = SparseVector{V,Int}(0,[1],[zero(V)])
+@inline rand_tuple(::AbstractRNG, ::Type{SparseVector{}}) where V = SparseVector{V,Int}(0,[1],[zero(V)])
+@inline rand_tuple(::Type{SparseVector{}}) where V = SparseVector{V,Int}(0,[1],[zero(V)])
+
 
 @generated function iszero_tuple(tup::NTuple{N,V}) where {N,V}
     ex = Expr(:&&, [:(z == tup[$i]) for i=1:N]...)
