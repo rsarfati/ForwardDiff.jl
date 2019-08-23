@@ -31,7 +31,7 @@ end
 
 @inline static_dual_eval(::Type{T}, f, x::StaticArray) where T = f(dualize(T, x))
 
-function vector_mode_dual_eval(f::F, x, cfg::Union{JacobianConfig,GradientConfig}) where {F}
+function vector_mode_dual_eval(f::F, x, cfg::Union{JacobianConfig,GradientConfig,SparseJacobianConfig}) where {F}
     xdual = cfg.duals
     seed!(xdual, x, cfg.seeds)
     return f(xdual)
@@ -53,6 +53,11 @@ end
     return Expr(:tuple, [:(single_seed(Partials{N,V}, Val{$i}())) for i in 1:N]...)
 end
 
+function sparse_construct_seeds(::Type{Partials{N,V}}) where {N,V}
+    result = [Partials{N,V}(SparseVector(N,[i],[one(V)])) for i in 1:N]
+    return result
+end
+
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
                seed::Partials{N,V} = zero(Partials{N,V})) where {T,V,N}
     for i in eachindex(duals)
@@ -62,7 +67,7 @@ function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
 end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
-               seeds::NTuple{N,Partials{N,V}}) where {T,V,N}
+               seeds::Union{Array{Partials{N,V}},NTuple{N,Partials{N,V}}}) where {T,V,N}
     for i in 1:N
         duals[i] = Dual{T,V,N}(x[i], seeds[i])
     end

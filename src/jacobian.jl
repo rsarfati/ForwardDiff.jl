@@ -3,6 +3,20 @@
 ###############
 
 """
+    ForwardDiff.sparse_jacobian(f, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f, x), check=Val{true}())
+
+Return `J(f)` evaluated at `x`, assuming `f` is called as `f(x)`.
+
+This method assumes that `isa(f(x), AbstractArray)`.
+
+Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
+"""
+function sparse_jacobian(f, x::AbstractArray, cfg::SparseJacobianConfig{T} = SparseJacobianConfig(f, x), ::Val{CHK}=Val{true}()) where {T,CHK}
+    CHK && checktag(T, f, x)
+    return sparse_vector_mode_jacobian(f, x, cfg)
+end
+
+"""
     ForwardDiff.jacobian(f, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f, x), check=Val{true}())
 
 Return `J(f)` evaluated at `x`, assuming `f` is called as `f(x)`.
@@ -113,8 +127,30 @@ function extract_jacobian!(::Type{T}, result::AbstractArray, ydual::AbstractArra
     return result
 end
 
+function sparse_extract_jacobian!(::Type{T}, ydual::AbstractArray, n) where {T}
+    result = [ SparseMatrixCSC(ydual[row].partials.values) for row in 1:length(ydual) ]
+    #row = vcat( (repeat([i],length(result[i].rowval),1)[:] for i in 1:length(result))... )
+    #col = vcat( (result[i].rowval for i in 1:length(result))... )
+    #val = vcat( (result[i].nzval for i in 1:length(result))... )
+    row = vcat( [repeat([i],length(result[i].rowval),1)[:] for i in 1:length(result)]... )
+    col = vcat( [result[i].rowval for i in 1:length(result)]... )
+    val = vcat( [result[i].nzval for i in 1:length(result)]... )
+    result = sparse(row, col, val)
+    return result
+end
+
+function sparse_extract_jacobian!(::Type{T}, ydual, n) where {T}
+    return [ SparseMatrixCSC(ydual.partials.values) ]
+end
+
+
 function extract_jacobian!(::Type{T}, result::MutableDiffResult, ydual::AbstractArray, n) where {T}
     extract_jacobian!(T, DiffResults.jacobian(result), ydual, n)
+    return result
+end
+
+function sparse_extract_jacobian!(::Type{T}, result::MutableDiffResult, ydual::AbstractArray, n) where {T}
+    sparse_extract_jacobian!(T, DiffResults.sparse_jacobian(result), ydual, n)
     return result
 end
 
@@ -141,6 +177,12 @@ function vector_mode_jacobian(f::F, x, cfg::JacobianConfig{T,V,N}) where {F,T,V,
     result = similar(ydual, valtype(eltype(ydual)), length(ydual), N)
     extract_jacobian!(T, result, ydual, N)
     extract_value!(T, result, ydual)
+    return result
+end
+
+function sparse_vector_mode_jacobian(f::F, x, cfg::SparseJacobianConfig{T,V,N}) where {F,T,V,N}
+    ydual = vector_mode_dual_eval(f, x, cfg)
+    result = sparse_extract_jacobian!(T, ydual, N)
     return result
 end
 

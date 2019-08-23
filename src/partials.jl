@@ -1,6 +1,7 @@
 struct Partials{N,V} <: AbstractVector{V}
-    values::NTuple{N,V}
+    values::SparseVector{V,Int}
 end
+Partials(v::SparseVector{V,Int}) where {V} = Partials{length(v),V}(v)
 
 ##############################
 # Utility/Accessor Functions #
@@ -37,13 +38,15 @@ Base.mightalias(x::AbstractArray, y::Partials) = false
 @inline iszero(partials::Partials) = iszero_tuple(partials.values)
 
 @inline Base.zero(partials::Partials) = zero(typeof(partials))
-@inline Base.zero(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(zero_tuple(NTuple{N,V}))
-
+#@inline Base.zero(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(zero_tuple(NTuple{N,V}))
+@inline Base.zero(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(SparseVector(N,[1],[zero(V)]))
 @inline Base.one(partials::Partials) = one(typeof(partials))
-@inline Base.one(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(one_tuple(NTuple{N,V}))
+#@inline Base.one(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(one_tuple(NTuple{N,V}))
+@inline Base.one(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(SparseVector(N,[1],[one(V)]))
 
 @inline Random.rand(partials::Partials) = rand(typeof(partials))
-@inline Random.rand(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(rand_tuple(NTuple{N,V}))
+#@inline Random.rand(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(rand_tuple(NTuple{N,V}))
+@inline Base.rand(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(SparseVector(rand(N)))
 @inline Random.rand(rng::AbstractRNG, partials::Partials) = rand(rng, typeof(partials))
 @inline Random.rand(rng::AbstractRNG, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(rand_tuple(rng, NTuple{N,V}))
 
@@ -73,6 +76,10 @@ Base.promote_rule(::Type{Partials{N,A}}, ::Type{Partials{N,B}}) where {N,A,B} = 
 
 Base.convert(::Type{Partials{N,V}}, partials::Partials) where {N,V} = Partials{N,V}(partials.values)
 Base.convert(::Type{Partials{N,V}}, partials::Partials{N,V}) where {N,V} = partials
+#CHECK
+Base.convert(::Type{Partials}, partials::SparseVector{V}) where {V} = Partials{length(partials),V}(partials)
+Base.convert(::Type{Partials{N,V}}, partials::SparseVector{V}) where {N,V} = Partials{length(partials),V}(partials)
+
 
 ########################
 # Arithmetic Functions #
@@ -80,8 +87,8 @@ Base.convert(::Type{Partials{N,V}}, partials::Partials{N,V}) where {N,V} = parti
 
 @inline Base.:+(a::Partials{N}, b::Partials{N}) where {N} = Partials(add_tuples(a.values, b.values))
 @inline Base.:-(a::Partials{N}, b::Partials{N}) where {N} = Partials(sub_tuples(a.values, b.values))
-@inline Base.:-(partials::Partials) = Partials(minus_tuple(partials.values))
-@inline Base.:*(x::Real, partials::Partials) = partials*x
+@inline Base.:-(partials::Partials{N}) where {N} = Partials(minus_tuple(partials.values))
+@inline Base.:*(x::Real, partials::Partials{N}) where {N} = Partials(scale_tuple(partials.values,x))
 
 @inline function _div_partials(a::Partials, b::Partials, aval, bval)
     return _mul_partials(a, b, inv(bval), -(aval / (bval*bval)))
@@ -201,24 +208,48 @@ end
     return tupexpr(i -> :(tup[$i] * x), N)
 end
 
+function scale_tuple(tup::SparseVector, x)
+    return tup*x
+end
+
 @generated function div_tuple_by_scalar(tup::NTuple{N}, x) where N
     return tupexpr(i -> :(tup[$i] / x), N)
+end
+
+function div_tuple_by_scalar(tup::SparseVector, x)
+    return tup/x
 end
 
 @generated function add_tuples(a::NTuple{N}, b::NTuple{N})  where N
     return tupexpr(i -> :(a[$i] + b[$i]), N)
 end
 
+function add_tuples(a::SparseVector, b::SparseVector)
+    return a+b
+end
+
 @generated function sub_tuples(a::NTuple{N}, b::NTuple{N})  where N
     return tupexpr(i -> :(a[$i] - b[$i]), N)
+end
+
+function sub_tuples(a::SparseVector, b::SparseVector)
+    return a-b #tupexpr(i -> :(a[$i] - b[$i]), N)
 end
 
 @generated function minus_tuple(tup::NTuple{N}) where N
     return tupexpr(i -> :(-tup[$i]), N)
 end
 
+function minus_tuple(tup::SparseVector)
+    return -tup
+end
+
 @generated function mul_tuples(a::NTuple{N}, b::NTuple{N}, afactor, bfactor) where N
     return tupexpr(i -> :((afactor * a[$i]) + (bfactor * b[$i])), N)
+end
+
+function mul_tuples(a::SparseVector, b::SparseVector, afactor, bfactor)
+    return afactor*a + bfactor*b
 end
 
 ###################

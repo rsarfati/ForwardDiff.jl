@@ -135,6 +135,37 @@ struct JacobianConfig{T,V,N,D} <: AbstractConfig{N}
     duals::D
 end
 
+struct SparseJacobianConfig{T,V,N,D} <: AbstractConfig{N}
+    seeds #::NTuple{N,Partials{N,V}}
+    duals::D
+end
+
+
+"""
+    ForwardDiff.SparseJacobianConfig(f, x::AbstractArray, chunk::Chunk = Chunk(x))
+
+Return a `SparseJacobianConfig` instance based on the type of `f` and type/shape of the input
+vector `x`.
+
+The returned `SparseJacobianConfig` instance contains all the work buffers required by
+`ForwardDiff.jacobian` and `ForwardDiff.jacobian!` when the target function takes the form
+`f(x)`.
+
+If `f` is `nothing` instead of the actual target function, then the returned instance can
+be used with any target function. However, this will reduce ForwardDiff's ability to catch
+and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+
+This constructor does not store/modify `x`.
+"""
+function SparseJacobianConfig(f::F,
+                        x::AbstractArray{V},
+                        ::Chunk{N} = Chunk(x,length(x)),
+                        ::T = Tag(f, V)) where {F,V,N,T}
+    seeds = sparse_construct_seeds(Partials{N,V})
+    duals = similar(x, Dual{T,V,N})
+    return SparseJacobianConfig{T,V,N,typeof(duals)}(seeds, duals)
+end
+
 """
     ForwardDiff.JacobianConfig(f, x::AbstractArray, chunk::Chunk = Chunk(x))
 

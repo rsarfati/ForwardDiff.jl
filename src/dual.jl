@@ -86,11 +86,11 @@ end
     if S ≺ T
         d
     else
-        throw(DualMismatchError(T,S))        
+        throw(DualMismatchError(T,S))
     end
 end
 
-@inline partials(x) = Partials{0,typeof(x)}(tuple())
+@inline partials(x) = Partials{0,typeof(x)}(spzeros(typeof(x), 0)) # Partials{0,typeof(x)}(tuple())
 @inline partials(d::Dual) = d.partials
 @inline partials(x, i...) = zero(x)
 @inline Base.@propagate_inbounds partials(d::Dual, i) = d.partials[i]
