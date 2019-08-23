@@ -64,7 +64,7 @@ Base.hash(partials::Partials, hsh::UInt64) = hash(hash(partials), hsh)
 #Base.read(io::IO, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(ntuple(i->read(io, V), N))
 Base.read(io::IO, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(
                                               SparseVector([i->read(io, V), collect(1:N)]))
-Base.read(io::IO, ::Type{Partials{0,V}}) where {V} = Partials{0,V}(SparseVector{V,Int}(0,[1],[zero(V)]))
+Base.read(io::IO, ::Type{Partials{0,V}}) where {V} = Partials{0,V}(sparse([]))
 
 
 function Base.write(io::IO, partials::Partials)
@@ -134,22 +134,21 @@ end
 
 # edge cases where N == 0 #
 #-------------------------#
-
-@inline Base.:+(a::Partials{0,A}, b::Partials{0,B}) where {A,B} = Partials{0,promote_type(A,B)}(tuple())
+@inline Base.:+(a::Partials{0,A}, b::Partials{0,B}) where {A,B} = Partials{0,promote_type(A,B)}(sparse([]))
 @inline Base.:+(a::Partials{0,A}, b::Partials{N,B}) where {N,A,B} = convert(Partials{N,promote_type(A,B)}, b)
 @inline Base.:+(a::Partials{N,A}, b::Partials{0,B}) where {N,A,B} = convert(Partials{N,promote_type(A,B)}, a)
 
-@inline Base.:-(a::Partials{0,A}, b::Partials{0,B}) where {A,B} = Partials{0,promote_type(A,B)}(tuple())
+@inline Base.:-(a::Partials{0,A}, b::Partials{0,B}) where {A,B} = Partials{0,promote_type(A,B)}(sparse([]))
 @inline Base.:-(a::Partials{0,A}, b::Partials{N,B}) where {N,A,B} = -(convert(Partials{N,promote_type(A,B)}, b))
 @inline Base.:-(a::Partials{N,A}, b::Partials{0,B}) where {N,A,B} = convert(Partials{N,promote_type(A,B)}, a)
 @inline Base.:-(partials::Partials{0,V}) where {V} = partials
 
-@inline Base.:*(partials::Partials{0,V}, x::Real) where {V} = Partials{0,promote_type(V,typeof(x))}(tuple())
-@inline Base.:*(x::Real, partials::Partials{0,V}) where {V} = Partials{0,promote_type(V,typeof(x))}(tuple())
+@inline Base.:*(partials::Partials{0,V}, x::Real) where {V} = Partials{0,promote_type(V,typeof(x))}(sparse([]))
+@inline Base.:*(x::Real, partials::Partials{0,V}) where {V} = Partials{0,promote_type(V,typeof(x))}(sparse([]))
 
-@inline Base.:/(partials::Partials{0,V}, x::Real) where {V} = Partials{0,promote_type(V,typeof(x))}(tuple())
+@inline Base.:/(partials::Partials{0,V}, x::Real) where {V} = Partials{0,promote_type(V,typeof(x))}(sparse([]))
 
-@inline _mul_partials(a::Partials{0,A}, b::Partials{0,B}, afactor, bfactor) where {A,B} = Partials{0,promote_type(A,B)}(tuple())
+@inline _mul_partials(a::Partials{0,A}, b::Partials{0,B}, afactor, bfactor) where {A,B} = Partials{0,promote_type(A,B)}(sparse([]))
 @inline _mul_partials(a::Partials{0,A}, b::Partials{N,B}, afactor, bfactor) where {N,A,B} = bfactor * b
 @inline _mul_partials(a::Partials{N,A}, b::Partials{0,B}, afactor, bfactor) where {N,A,B} = afactor * a
 
@@ -178,10 +177,10 @@ end
 @inline rand_tuple(::Type{Tuple{}}) = tuple()
 =#
 @inline iszero_tuple(::SparseVector{}) = true
-@inline zero_tuple(::Type{SparseVector{}}) where V = SparseVector{V,Int}(0,[1],[zero(V)])
-@inline one_tuple(::Type{SparseVector{}}) where V = SparseVector{V,Int}(0,[1],[zero(V)])
-@inline rand_tuple(::AbstractRNG, ::Type{SparseVector{}}) where V = SparseVector{V,Int}(0,[1],[zero(V)])
-@inline rand_tuple(::Type{SparseVector{}}) where V = SparseVector{V,Int}(0,[1],[zero(V)])
+@inline zero_tuple(::Type{SparseVector{}}) = sparse([])
+@inline one_tuple(::Type{SparseVector{}}) = sparse([])
+@inline rand_tuple(::AbstractRNG, ::Type{SparseVector{}}) = sparse([])
+@inline rand_tuple(::Type{SparseVector{}}) = sparse([])
 
 
 @generated function iszero_tuple(tup::NTuple{N,V}) where {N,V}
