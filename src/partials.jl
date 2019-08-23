@@ -38,16 +38,20 @@ Base.mightalias(x::AbstractArray, y::Partials) = false
 @inline iszero(partials::Partials) = iszero_tuple(partials.values)
 
 @inline Base.zero(partials::Partials) = zero(typeof(partials))
+
 #@inline Base.zero(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(zero_tuple(NTuple{N,V}))
-@inline Base.zero(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(SparseVector(N,[1],[zero(V)]))
+@inline Base.zero(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(SparseVector{V,Int}(N,[1],[zero(V)]))
 @inline Base.one(partials::Partials) = one(typeof(partials))
 #@inline Base.one(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(one_tuple(NTuple{N,V}))
-@inline Base.one(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(SparseVector(N,[1],[one(V)]))
+@inline Base.one(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(SparseVector{V,Int}(ones(V,N)))
 
 @inline Random.rand(partials::Partials) = rand(typeof(partials))
+
 #@inline Random.rand(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(rand_tuple(NTuple{N,V}))
 @inline Base.rand(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(SparseVector(rand(N)))
+
 @inline Random.rand(rng::AbstractRNG, partials::Partials) = rand(rng, typeof(partials))
+
 #@inline Random.rand(rng::AbstractRNG, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(rand_tuple(rng, NTuple{N,V}))
 @inline Random.rand(rng::AbstractRNG, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(SparseVector(rand(rng,N)))
 
@@ -168,6 +172,13 @@ function tupexpr(f, N)
         @inbounds return $ex
     end
 end
+function spexpr(f, N)
+    ex = Expr(:sparse, [f(i) for i=1:N]...)
+    return quote
+        $(Expr(:meta, :inline))
+        @inbounds return $ex
+    end
+end
 
 #=
 @inline iszero_tuple(::Tuple{}) = true
@@ -182,7 +193,7 @@ end
 @inline rand_tuple(::AbstractRNG, ::Type{SparseVector{}}) = sparse([])
 @inline rand_tuple(::Type{SparseVector{}}) = sparse([])
 
-
+#=
 @generated function iszero_tuple(tup::NTuple{N,V}) where {N,V}
     ex = Expr(:&&, [:(z == tup[$i]) for i=1:N]...)
     return quote
@@ -193,7 +204,7 @@ end
 end
 
 @generated function zero_tuple(::Type{NTuple{N,V}}) where {N,V}
-    ex = tupexpr(i -> :(z), N)
+    ex = spexpr(i -> :(z), N)
     return quote
         z = zero(V)
         return $ex
@@ -201,12 +212,39 @@ end
 end
 
 @generated function one_tuple(::Type{NTuple{N,V}}) where {N,V}
-    ex = tupexpr(i -> :(z), N)
+    ex = spexpr(i -> :(z), N)
     return quote
         z = one(V)
         return $ex
     end
 end
+=#
+
+# Functions for SparseVector
+@generated function iszero_spvec(spvec::SparseVector{V,Int}, N::Int64) where {V}
+    ex = Expr(:&&, [:(z == spvec[$i]) for i=1:N]...)
+    return quote
+        z = zero(V)
+        $(Expr(:meta, :inline))
+        @inbounds return $ex
+    end
+end
+@generated function zero_spvec(::Type{SparseVector{V,Int}}, N::Int64) where {V}
+    @show N
+    ex = spexpr(i -> :(z), N)
+    return quote
+        z = zero(V)
+        return $ex
+    end
+end
+@generated function one_spvec(::Type{SparseVector{V,Int}}, N::Int64) where {V}
+    ex = spexpr(i -> :(z), N)
+    return quote
+        z = one(V)
+        return $ex
+    end
+end
+
 
 @generated function rand_tuple(rng::AbstractRNG, ::Type{NTuple{N,V}}) where {N,V}
     return tupexpr(i -> :(rand(rng, V)), N)
