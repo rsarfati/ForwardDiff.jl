@@ -94,17 +94,16 @@ for N in (0, 3), T in (Int, Float32, Float64)
     ########################
     # Arithmetic Functions #
     ########################
+    ZERO_PARTIALS = Partials{0,T}(sparse([]))
 
-    ZERO_PARTIALS = Partials{0,T}(())
-
-    @test (PARTIALS + PARTIALS).values == map(v -> v + v, VALUES)
+    @test (PARTIALS + PARTIALS).values == sparse([v + v for v in VALUES])
     @test (PARTIALS + ZERO_PARTIALS) === PARTIALS
     @test (ZERO_PARTIALS + PARTIALS) === PARTIALS
 
-    @test (PARTIALS - PARTIALS).values == map(v -> v - v, VALUES)
+    @test (PARTIALS - PARTIALS).values == sparse([v - v for v in VALUES])
     @test (PARTIALS - ZERO_PARTIALS) === PARTIALS
     @test (ZERO_PARTIALS - PARTIALS) === -PARTIALS
-    @test getfield(-(PARTIALS), :values) == map(-, VALUES)
+    @test getfield(-(PARTIALS), :values) == sparse([-v for v in VALUES])
 
     X = rand()
     Y = rand()
