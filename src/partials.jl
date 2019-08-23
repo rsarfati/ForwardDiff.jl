@@ -35,13 +35,15 @@ Base.mightalias(x::AbstractArray, y::Partials) = false
 # Generic Functions #
 #####################
 
-@inline iszero(partials::Partials) = iszero_tuple(partials.values)
+@inline iszero(partials::Partials{N,V}) where {N,V} = (N == 0) || iszero(partials.values)
 
 @inline Base.zero(partials::Partials) = zero(typeof(partials))
 
 #@inline Base.zero(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(zero_tuple(NTuple{N,V}))
 @inline Base.zero(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(SparseVector{V,Int}(N,[1],[zero(V)]))
+
 @inline Base.one(partials::Partials) = one(typeof(partials))
+
 #@inline Base.one(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(one_tuple(NTuple{N,V}))
 @inline Base.one(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(SparseVector{V,Int}(ones(V,N)))
 
@@ -53,7 +55,7 @@ Base.mightalias(x::AbstractArray, y::Partials) = false
 @inline Random.rand(rng::AbstractRNG, partials::Partials) = rand(rng, typeof(partials))
 
 #@inline Random.rand(rng::AbstractRNG, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(rand_tuple(rng, NTuple{N,V}))
-@inline Random.rand(rng::AbstractRNG, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(SparseVector(rand(rng,N)))
+@inline Random.rand(rng::AbstractRNG, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(SparseVector(rand(rng, V, N)))
 
 Base.isequal(a::Partials{N}, b::Partials{N}) where {N} = isequal(a.values, b.values)
 Base.:(==)(a::Partials{N}, b::Partials{N}) where {N} = a.values == b.values
@@ -66,8 +68,7 @@ Base.hash(partials::Partials, hsh::UInt64) = hash(hash(partials), hsh)
 @inline Base.copy(partials::Partials) = partials
 
 #Base.read(io::IO, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(ntuple(i->read(io, V), N))
-Base.read(io::IO, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(
-                                              SparseVector([i->read(io, V), collect(1:N)]))
+Base.read(io::IO, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(SparseVector{V,Int}([read(io, V) for i=1:N]))
 Base.read(io::IO, ::Type{Partials{0,V}}) where {V} = Partials{0,V}(sparse([]))
 
 
@@ -172,6 +173,7 @@ function tupexpr(f, N)
         @inbounds return $ex
     end
 end
+
 function spexpr(f, N)
     ex = Expr(:sparse, [f(i) for i=1:N]...)
     return quote
@@ -221,8 +223,10 @@ end
 =#
 
 # Functions for SparseVector
-@generated function iszero_spvec(spvec::SparseVector{V,Int}, N::Int64) where {V}
-    ex = Expr(:&&, [:(z == spvec[$i]) for i=1:N]...)
+@generated function iszero_tuple(spvec::SparseVector{V,Int}, N::Int64) where {V}
+    if N == 0 return true end
+    ex = Expr(:&&, [:(z == $item) for val in spvec]...)
+    @show "HERE"
     return quote
         z = zero(V)
         $(Expr(:meta, :inline))
