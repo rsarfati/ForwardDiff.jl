@@ -5,6 +5,7 @@ using DiffResults: DiffResult, MutableDiffResult, ImmutableDiffResult
 using StaticArrays, SparseArrays
 using Random
 
+import Base: iszero
 import NaNMath
 import SpecialFunctions
 import CommonSubexpressions
