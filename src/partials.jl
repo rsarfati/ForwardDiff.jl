@@ -48,7 +48,8 @@ Base.mightalias(x::AbstractArray, y::Partials) = false
 #@inline Random.rand(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(rand_tuple(NTuple{N,V}))
 @inline Base.rand(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(SparseVector(rand(N)))
 @inline Random.rand(rng::AbstractRNG, partials::Partials) = rand(rng, typeof(partials))
-@inline Random.rand(rng::AbstractRNG, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(rand_tuple(rng, NTuple{N,V}))
+#@inline Random.rand(rng::AbstractRNG, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(rand_tuple(rng, NTuple{N,V}))
+@inline Random.rand(rng::AbstractRNG, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(SparseVector(rand(rng,N)))
 
 Base.isequal(a::Partials{N}, b::Partials{N}) where {N} = isequal(a.values, b.values)
 Base.:(==)(a::Partials{N}, b::Partials{N}) where {N} = a.values == b.values

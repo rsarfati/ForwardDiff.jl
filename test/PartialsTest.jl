@@ -4,16 +4,17 @@ using Test
 using Random
 using ForwardDiff
 using ForwardDiff: Partials
+using SparseArrays
 
 samerng() = MersenneTwister(1)
 
 for N in (0, 3), T in (Int, Float32, Float64)
     println("  ...testing Partials{$N,$T}")
 
-    VALUES = (rand(T,N)...,)
+    VALUES = sparse(rand(T,N))
     PARTIALS = Partials{N,T}(VALUES)
 
-    VALUES2 = (rand(T,N)...,)
+    VALUES2 = sparse(rand(T,N))
     PARTIALS2 = Partials{N,T}(VALUES2)
 
     ##############################
