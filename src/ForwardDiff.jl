@@ -2,7 +2,7 @@ module ForwardDiff
 
 using DiffRules, DiffResults
 using DiffResults: DiffResult, MutableDiffResult, ImmutableDiffResult
-using StaticArrays
+using StaticArrays, SparseArrays
 using Random
 
 import NaNMath
