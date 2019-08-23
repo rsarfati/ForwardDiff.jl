@@ -46,7 +46,6 @@ for N in (0, 3), T in (Int, Float32, Float64)
     #####################
     # Generic Functions #
     #####################
-
     @test zero(PARTIALS) == zero(typeof(PARTIALS))
     @test zero(PARTIALS).values == map(zero, VALUES)
 
@@ -97,20 +96,20 @@ for N in (0, 3), T in (Int, Float32, Float64)
     ZERO_PARTIALS = Partials{0,T}(sparse([]))
 
     @test (PARTIALS + PARTIALS).values == sparse([v + v for v in VALUES])
-    @test (PARTIALS + ZERO_PARTIALS) === PARTIALS
-    @test (ZERO_PARTIALS + PARTIALS) === PARTIALS
+    @test (PARTIALS + ZERO_PARTIALS) == PARTIALS
+    @test (ZERO_PARTIALS + PARTIALS) == PARTIALS
 
     @test (PARTIALS - PARTIALS).values == sparse([v - v for v in VALUES])
-    @test (PARTIALS - ZERO_PARTIALS) === PARTIALS
-    @test (ZERO_PARTIALS - PARTIALS) === -PARTIALS
+    @test (PARTIALS - ZERO_PARTIALS) == PARTIALS
+    @test (ZERO_PARTIALS - PARTIALS) == -PARTIALS
     @test getfield(-(PARTIALS), :values) == sparse([-v for v in VALUES])
 
     X = rand()
     Y = rand()
 
     @test X * PARTIALS == PARTIALS * X
-    @test (X * PARTIALS).values == map(v -> X * v, VALUES)
-    @test (PARTIALS / X).values == map(v -> v / X, VALUES)
+    @test (X * PARTIALS).values == sparse([X * v for v in VALUES])
+    @test (PARTIALS / X).values == sparse([v / X for v in VALUES])
 
     if N > 0
         @test ForwardDiff._div_partials(PARTIALS, PARTIALS2, X, Y) == ForwardDiff._mul_partials(PARTIALS, PARTIALS2, inv(Y), -X/(Y^2))
