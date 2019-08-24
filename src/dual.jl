@@ -59,11 +59,14 @@ tag can be extracted, so it should be used in the _innermost_ function.
     return Dual{T}(convert(C, value), convert(Partials{N,C}, partials))
 end
 
-@inline Dual{T}(value, partials::Tuple) where {T} = Dual{T}(value, Partials(partials))
-@inline Dual{T}(value, partials::Tuple{}) where {T} = Dual{T}(value, Partials{0,typeof(value)}(partials))
-@inline Dual{T}(value) where {T} = Dual{T}(value, ())
-@inline Dual{T}(x::Dual{T}) where {T} = Dual{T}(x, ())
-@inline Dual{T}(value, partial1, partials...) where {T} = Dual{T}(value, tuple(partial1, partials...))
+@inline Dual{T}(value, partials::SparseVector) where {T} = Dual{T}(value, Partials(partials))
+@inline Dual{T}(value, partials::SparseVector{}) where {T} = Dual{T}(value, Partials{0,typeof(value)}(partials))
+@inline Dual{T}(value) where {T} = Dual{T}(value, sparse([]))
+@inline Dual{T}(x::Dual{T}) where {T} = Dual{T}(x, sparse([]))
+@inline function Dual{T}(value, partial1, partials...) where {T}
+    @show partial1, partials
+    return Dual{T}(value, tuple(partial1, partials...))
+end
 @inline Dual{T}(value::V, ::Chunk{N}, p::Val{i}) where {T,V,N,i} = Dual{T}(value, single_seed(Partials{N,V}, p))
 @inline Dual(args...) = Dual{Nothing}(args...)
 
@@ -190,6 +193,7 @@ macro define_ternary_dual_op(f, xyz_body, xy_body, xz_body, yz_body, x_body, y_b
     return esc(defs)
 end
 
+# TODO: pretty sure this is where the hangup is
 function unary_dual_definition(M, f)
     FD = ForwardDiff
     Mf = M == :Base ? f : :($M.$f)
