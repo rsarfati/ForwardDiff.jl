@@ -63,10 +63,13 @@ end
 @inline Dual{T}(value, partials::SparseVector{}) where {T} = Dual{T}(value, Partials{0,typeof(value)}(partials))
 @inline Dual{T}(value) where {T} = Dual{T}(value, sparse([]))
 @inline Dual{T}(x::Dual{T}) where {T} = Dual{T}(x, sparse([]))
+
+# PROBLEM
 @inline function Dual{T}(value, partial1, partials...) where {T}
     @show partial1, partials
     return Dual{T}(value, tuple(partial1, partials...))
 end
+
 @inline Dual{T}(value::V, ::Chunk{N}, p::Val{i}) where {T,V,N,i} = Dual{T}(value, single_seed(Partials{N,V}, p))
 @inline Dual(args...) = Dual{Nothing}(args...)
 
